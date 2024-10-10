@@ -153,6 +153,43 @@ const element_parser_function = function transformElements(elements) {
   }));
 }
 
+const upstage_api_params_info = {
+  "output_formats": {
+    "type": "array",
+    "items": {
+      "type": "string",
+      "enum": ["text", "html", "markdown"]
+    },
+    "default": "html",
+    "description": "Indicates in which format each layout element output is formatted."
+  },
+  "ocr": {
+    "type": "string",
+    "enum": ["auto", "force"],
+    "default": "auto",
+    "description": "Indicates whether to use OCR or not."
+  },
+  "coordinates": {
+    "type": "boolean",
+    "default": true,
+    "description": "Indicates whether to return coordinates of bounding boxes of each layout element."
+  },
+  "model": {
+    "type": "string",
+    "default": "",
+    "description": "Indicates which model is used for inference. The API uses the latest version of model unless user specify certain model version."
+  },
+  "base64_encoding": {
+    "type": "array",
+    "items": {
+      "type": "string",
+      "enum": ["table", "image", "text", "title", "list"]
+    },
+    "default": [],
+    "description": "Indicates which layout category should be provided as base64 encoded string."
+  }
+}
+
 function App() {
   const [apiSchema, setApiSchema] = useState(upstage_schema);
 
@@ -185,42 +222,7 @@ function App() {
   const [apiParams, setApiParams] = useState({
     url: 'https://api.upstage.ai/v1/document-ai/document-parse',
     api_key: '',
-    data: {
-      "output_formats": {
-        "type": "array",
-        "items": {
-          "type": "string",
-          "enum": ["text", "html", "markdown"]
-        },
-        "default": "html",
-        "description": "Indicates in which format each layout element output is formatted."
-      },
-      "ocr": {
-        "type": "string",
-        "enum": ["auto", "force"],
-        "default": "auto",
-        "description": "Indicates whether to use OCR or not."
-      },
-      "coordinates": {
-        "type": "boolean",
-        "default": true,
-        "description": "Indicates whether to return coordinates of bounding boxes of each layout element."
-      },
-      "model": {
-        "type": "string",
-        "default": "",
-        "description": "Indicates which model is used for inference. The API uses the latest version of model unless user specify certain model version."
-      },
-      "base64_encoding": {
-        "type": "array",
-        "items": {
-          "type": "string",
-          "enum": ["table", "image", "text", "title", "list"]
-        },
-        "default": [],
-        "description": "Indicates which layout category should be provided as base64 encoded string."
-      }
-    }
+    data: upstage_api_params_info,
   });
 
   const [apiTestResult, setApiTestResult] = useState(null);
