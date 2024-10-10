@@ -1,70 +1,84 @@
-# Getting Started with Create React App
+# 데이터 매핑 에디터 사용 가이드
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+## 소개
+데이터 매핑 에디터는 API 응답 데이터를 UI 요구 스키마에 맞게 변환하는 도구입니다. 이 가이드는 에디터의 주요 기능과 사용 방법을 설명합니다.
 
-## Available Scripts
+## 주요 기능
+1. API 스키마 편집
+2. UI 스키마 확인
+3. 필드 매핑
+4. 변환 함수 작성
+5. 결과 미리보기
 
-In the project directory, you can run:
+## 사용 방법
 
-### `npm start`
+### 1. API 스키마 편집
+- '스키마 편집' 버튼을 클릭하여 API 응답 스키마를 수정할 수 있습니다.
+- 스키마를 변경하면 기존 매핑과 변환 함수가 초기화되니 주의하세요.
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+### 2. UI 스키마 확인
+- UI 요구 스키마는 미리 정의되어 있으며, 확인만 가능합니다.
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+### 3. 필드 매핑
+- FlowDiagram을 사용하여 API 필드와 UI 필드를 연결합니다.
+- 선을 그어 매핑을 생성하고, 삭제 아이콘을 클릭하여 매핑을 제거할 수 있습니다.
 
-### `npm test`
+### 4. 변환 함수 작성
+- 매핑된 필드에 대해 변환 함수를 작성할 수 있습니다.
+- MonacoEditor를 사용하여 JavaScript 함수를 작성합니다.
+- 입력과 출력 타입이 주석으로 제공됩니다.
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### 5. 결과 미리보기
+- '변환 실행' 버튼을 클릭하여 변환 결과를 미리볼 수 있습니다.
+- 오류가 있는 경우 스낵바로 알림이 표시됩니다.
 
-### `npm run build`
+## 주의사항
+- 모든 UI 필드는 반드시 매핑되어야 합니다.
+- 변환 함수는 올바른 JavaScript 문법으로 작성해야 합니다.
+- 출력 데이터는 UI 스키마와 일치해야 합니다.
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+이 가이드를 참고하여 데이터 매핑 에디터를 효과적으로 사용하시기 바랍니다.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+## 실행 가이드
 
-### `npm run eject`
+### 1. 프로젝트 설치
+1. 저장소를 클론합니다:
+   ```
+   git clone https://github.com/sungreong/DataMappingWizard.git
+   ```
+2. 프로젝트 디렉토리로 이동합니다:
+   ```
+   cd [프로젝트 디렉토리]
+   ```
+3. 필요한 패키지를 설치합니다:
+   ```
+   npm install
+   ```
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+### 2. 개발 서버 실행
+1. 다음 명령어로 개발 서버를 시작합니다:
+   ```
+   npm start
+   ```
+2. 브라우저에서 `http://localhost:1234`으로 접속하여 애플리케이션을 확인합니다.
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+### 3. 빌드 및 배포
+1. 프로덕션용 빌드를 생성합니다:
+   ```
+   npm run build
+   ```
+2. `build` 폴더에 생성된 파일들을 웹 서버에 배포합니다.
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+### 4. 테스트 실행
+- 단위 테스트를 실행하려면:
+  ```
+  npm test
+  ```
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+### 5. 문제 해결
+- 실행 중 문제가 발생하면 콘솔 로그를 확인하세요.
+- 필요한 경우 `npm install`을 다시 실행하여 패키지를 재설치하세요.
 
-## Learn More
+이 가이드를 따라 데이터 매핑 에디터를 성공적으로 실행하고 사용할 수 있습니다.
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
