@@ -15,9 +15,9 @@ const FunctionViewer = ({ uiField, function: transformFunction, onChange, apiFie
 
   return (
     <Box p={2}>
-      <Typography variant="h6" gutterBottom>{uiField} 변환 함수</Typography>
+      <Typography variant="h6" gutterBottom>{uiField}</Typography>
       <MonacoEditor
-        height="200px"
+        height="600px"
         language="javascript"
         theme="vs-dark"
         value={transformFunction || generateDefaultFunction()}

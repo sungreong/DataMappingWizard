@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import ReactFlow, { 
   Handle, 
   Position, 
@@ -7,9 +7,10 @@ import ReactFlow, {
   useEdgesState,
   Background,
   Controls,
-  MarkerType
+  MarkerType,
+  getBezierPath
 } from 'react-flow-renderer';
-import { Paper, Typography } from '@mui/material';
+import { Paper, Typography, Tooltip } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 
 // 색상 생성 함수
@@ -26,32 +27,67 @@ const generateColorMap = (uiSchema) => {
 };
 
 const CustomNode = ({ data }) => (
-  <Paper elevation={2} style={{ padding: '15px', borderRadius: '5px', cursor: 'pointer', width: '200px', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60px' }}>
-    {data.isUiSchema ? (
-      <Handle 
-        type="target" 
-        position={Position.Left} 
-        style={{ 
-          width: '10px', 
-          height: '20px',
-          background: data.color,
-          left: '-5px',
-        }}
-      />
-    ) : (
-      <Handle 
-        type="source" 
-        position={Position.Right} 
-        style={{ 
-          width: '10px', 
-          height: '20px',
-          background: '#555',
-          right: '-5px',
-        }}
-      />
-    )}
-    <Typography variant="body2">{data.label}</Typography>
-  </Paper>
+  <Tooltip title={data.description || ''} arrow>
+    <Paper 
+      elevation={3} 
+      style={{ 
+        padding: '15px', 
+        borderRadius: '8px', 
+        cursor: 'pointer', 
+        width: '220px', 
+        position: 'relative', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        height: '20px',
+        background: data.isUiSchema ? '#f0f4f8' : '#fff8e1',
+        border: `2px solid ${data.color || '#555'}`,
+        transition: 'all 0.3s ease'
+      }}
+    >
+      {data.isUiSchema ? (
+        <Handle 
+          type="target" 
+          position={Position.Left} 
+          style={{ 
+            width: '12px', 
+            height: '35px',
+            background: data.color,
+            left: '-6px',
+            borderRadius: '6px 0 0 6px'
+          }}
+        />
+      ) : (
+        <Handle 
+          type="source" 
+          position={Position.Right} 
+          style={{ 
+            width: '12px', 
+            height: '35px',
+            background: '#555',
+            right: '-6px',
+            borderRadius: '0 6px 6px 0'
+          }}
+        />
+      )}
+      <Typography variant="body2" style={{ fontWeight: 'bold' }}>{data.label}</Typography>
+    </Paper>
+  </Tooltip>
+);
+
+// SVG 정의를 추가합니다
+const ArrowMarker = ({ id, color }) => (
+  <marker
+    id={id}
+    viewBox="0 0 10 10"
+    refX="5"
+    refY="5"
+    markerWidth="10"
+    markerHeight="10"
+    orient="auto-start-reverse"
+  >
+    <path d="M 0 0 L 10 5 L 0 10 z" fill={color} />
+  </marker>
 );
 
 const CustomEdge = ({
@@ -64,9 +100,16 @@ const CustomEdge = ({
   targetPosition,
   style = {},
   data,
-  markerEnd,
 }) => {
-  const edgePath = `M ${sourceX} ${sourceY} C ${sourceX + 100} ${sourceY} ${targetX - 100} ${targetY} ${targetX} ${targetY}`;
+  const edgePath = getBezierPath({
+    sourceX,
+    sourceY,
+    sourcePosition,
+    targetX,
+    targetY,
+    targetPosition,
+  });
+
   const [edgeCenterX, edgeCenterY] = [
     sourceX + (targetX - sourceX) / 2,
     sourceY + (targetY - sourceY) / 2,
@@ -79,31 +122,33 @@ const CustomEdge = ({
 
   return (
     <>
+      <ArrowMarker id={`arrow-${id}`} color={data.color} />
       <path
         id={id}
-        style={{...style, stroke: data.color}}
+        style={{...style, strokeWidth: 2}}
         className="react-flow__edge-path"
         d={edgePath}
-        markerEnd={markerEnd}
+        markerEnd={`url(#arrow-${id})`}
       />
       <foreignObject
-        width={20}
-        height={20}
-        x={edgeCenterX - 10}
-        y={edgeCenterY - 10}
+        width={30}
+        height={30}
+        x={edgeCenterX - 15}
+        y={edgeCenterY - 15}
         className="edgebutton-foreignobject"
         requiredExtensions="http://www.w3.org/1999/xhtml"
       >
         <body>
           <DeleteIcon
             style={{
-              width: '20px',
-              height: '20px',
+              width: '30px',
+              height: '30px',
               cursor: 'pointer',
               color: 'red',
               background: 'white',
               borderRadius: '50%',
-              padding: '2px',
+              padding: '3px',
+              boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
             }}
             onClick={(event) => onEdgeClick(event, id)}
           />
@@ -129,13 +174,13 @@ const FlowDiagram = ({ apiSchema, uiSchema, mapping, onMappingChange, onNodeClic
       id: `api-${key}`,
       type: 'custom',
       data: { label: `${key}: ${value}`, isUiSchema: false },
-      position: { x: 0, y: index * 120 },
+      position: { x: 0, y: index * 70 },
     })),
     ...Object.entries(uiSchema).map(([key, value], index) => ({
       id: `ui-${key}`,
       type: 'custom',
       data: { label: `${key}: ${value}`, isUiSchema: true, color: colorMap[key] },
-      position: { x: 400, y: index * 120 },
+      position: { x: 400, y: index * 70 },
     })),
   ], [apiSchema, uiSchema, colorMap]);
 
@@ -158,11 +203,7 @@ const FlowDiagram = ({ apiSchema, uiSchema, mapping, onMappingChange, onNodeClic
       ...params,
       type: 'custom',
       animated: true,
-      style: { stroke: colorMap[uiField] },
-      markerEnd: {
-        type: MarkerType.ArrowClosed,
-        color: colorMap[uiField],
-      },
+      style: { stroke: colorMap[uiField], strokeWidth: 2 },
       data: { onDelete: onEdgeDelete, color: colorMap[uiField] },
     }, eds));
     const sourceNode = nodes.find(node => node.id === params.source);
@@ -188,11 +229,7 @@ const FlowDiagram = ({ apiSchema, uiSchema, mapping, onMappingChange, onNodeClic
         target: `ui-${uiField}`,
         type: 'custom',
         animated: true,
-        style: { stroke: colorMap[uiField] },
-        markerEnd: {
-          type: MarkerType.ArrowClosed,
-          color: colorMap[uiField],
-        },
+        style: { stroke: colorMap[uiField], strokeWidth: 2 },
         data: { onDelete: onEdgeDelete, color: colorMap[uiField] },
       }))
     );
@@ -205,8 +242,14 @@ const FlowDiagram = ({ apiSchema, uiSchema, mapping, onMappingChange, onNodeClic
     return { width: maxX, height: maxY };
   }, [nodes]);
 
+  const [zoom, setZoom] = useState(1);
+
   return (
-    <div style={{ width: `${diagramDimensions.width}px`, height: `${diagramDimensions.height}px` }}>
+    <div style={{ 
+      width: `${diagramDimensions.width}px`, 
+      height: `${diagramDimensions.height}px`,
+      position: 'relative' 
+    }}>
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -219,10 +262,14 @@ const FlowDiagram = ({ apiSchema, uiSchema, mapping, onMappingChange, onNodeClic
         fitView
         snapToGrid
         snapGrid={[15, 15]}
+        minZoom={0.5}
+        maxZoom={2}
+        defaultZoom={zoom}
       >
-        <Background color="#aaa" gap={16} />
-        <Controls />
+        <Background color="#e0e0e0" gap={16} size={1} />
+        <Controls showInteractive={false} />
       </ReactFlow>
+      
     </div>
   );
 };

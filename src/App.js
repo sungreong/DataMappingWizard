@@ -8,28 +8,155 @@ import PreviewData from './components/PreviewData';
 import MappingList from './components/MappingList';
 import FunctionViewer from './components/FunctionViewer';
 import SampleDataEditor from './components/SampleDataEditor';
-import { Box, Container, Grid, Paper, Typography, Snackbar, Button, Tabs, Tab } from '@mui/material';
+import ApiParamsEditor from './components/ApiParamsEditor';
+import ApiTester from './components/ApiTester';
+import { Box, Container, Grid, Paper, Typography, Snackbar, Button, Tabs, Tab, AppBar, Toolbar } from '@mui/material';
 import MuiAlert from '@mui/material/Alert';
 import { validateOutputSchema } from './utils/schemaValidator';
 
-function App() {
-  const [apiSchema, setApiSchema] = useState({
-    id: 'number',
-    name: 'string',
-    email: 'string',
-    address: {
-      street: 'string',
-      city: 'string',
-      country: 'string'
+const upstage_schema = {
+  "api": "string",
+  "model": "string",
+  "content": {
+    "text": "string",
+    "html": "string",
+    "markdown": "string"
+  },
+  "elements": [
+    {
+      "id": "number",
+      "category": "string",
+      "page": "number",
+      "content": {
+        "text": "string",
+        "html": "string",
+        "markdown": "string"
+      },
+      "coordinates": [
+        {
+          "x": "number",
+          "y": "number"
+        }
+      ],
+      "base64_encoding": "string"
     }
-  });
+  ],
+  "usage": {
+    "pages": "number"
+  }
+}
+const ui_schema = {
+  "elements": [
+    {
+      "id": "string",
+      "x": "float",
+      "y": "float",
+      "width": "float",
+      "height": "float",
+      "text": "string",
+      "bbox": [
+        {
+          "x0": "float",
+          "y0": "float",
+          "x1": "float",
+          "y1": "float"
+        }
+      ],
+      "page": "integer"
+    }
+  ]
+}
 
-  const [uiSchema, setUiSchema] = useState({
-    userId: 'number',
-    fullName: 'string',
-    contactEmail: 'string',
-    location: 'string'
+const parser_schema = {
+  "id": "string",
+  "filename": "string",
+  "num_pages": "number",
+  "coordinate_system": "string",
+  "table_parsing_kwargs": "object",
+  "last_modified_date": "string",
+  "last_accessed_date": "string",
+  "creation_date": "string",
+  "file_size": "number",
+  "elements": [
+    {
+      "id": "string",
+      "x": "number",
+      "y": "number",
+      "width": "number",
+      "height": "number",
+      "text": "string",
+      "bbox": [
+        {
+          "x0": "number",
+          "y0": "number",
+          "x1": "number",
+          "y1": "number"
+        }
+      ],
+      "page": "number",
+      "variant": [
+        "string"
+      ],
+      "tokens": "number"
+    }
+  ]
+}
+const element_upstage_function = function transform(elements) {
+  return elements.map(element => {
+    // bbox 좌표 계산
+    const bbox = element.coordinates;
+    const x0 = bbox[0].x;
+    const y0 = bbox[0].y;
+    const x1 = bbox[2].x;
+    const y1 = bbox[2].y;
+
+    // width와 height 계산
+    const width = x1 - x0;
+    const height = y1 - y0;
+
+    // 변환된 요소 반환
+    return {
+      id: String(element.id),  // 문자열로 변환 (숫자도 안전하게 변환)
+      x: parseFloat(x0),
+      y: parseFloat(y0),
+      width: parseFloat(width),
+      height: parseFloat(height),
+      text: element.content.html || "",  // 텍스트가 없을 경우 빈 문자열
+      bbox: [
+        {
+          x0: parseFloat(x0),
+          y0: parseFloat(y0),
+          x1: parseFloat(x1),
+          y1: parseFloat(y1)
+        }
+      ],
+      page: parseInt(element.page, 10)  // 10진수로 파싱
+    };
   });
+}
+
+const element_parser_function = function transformElements(elements) {
+  return elements.map(element => ({
+    id: element.id,
+    x: parseFloat(element.x),
+    y: parseFloat(element.y),
+    width: parseFloat(element.width),
+    height: parseFloat(element.height),
+    text: element.text,
+    bbox: element.bbox.map(box => ({
+      x0: parseFloat(box.x0),
+      y0: parseFloat(box.y0),
+      x1: parseFloat(box.x1),
+      y1: parseFloat(box.y1)
+    })),
+    page: parseInt(element.page, 10)
+  }));
+}
+
+function App() {
+  const [apiSchema, setApiSchema] = useState(upstage_schema);
+
+  const [uiSchema, setUiSchema] = useState(ui_schema);
 
   const [mapping, setMapping] = useState({});
   const [previewData, setPreviewData] = useState({});
@@ -54,6 +181,49 @@ function App() {
   const [activeTab, setActiveTab] = useState(0);
 
   const [isEditingSampleData, setIsEditingSampleData] = useState(false);
+
+  const [apiParams, setApiParams] = useState({
+    url: 'https://api.upstage.ai/v1/document-ai/document-parse',
+    api_key: '',
+    data: {
+      "output_formats": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "enum": ["text", "html", "markdown"]
+        },
+        "default": "html",
+        "description": "Indicates in which format each layout element output is formatted."
+      },
+      "ocr": {
+        "type": "string",
+        "enum": ["auto", "force"],
+        "default": "auto",
+        "description": "Indicates whether to use OCR or not."
+      },
+      "coordinates": {
+        "type": "boolean",
+        "default": true,
+        "description": "Indicates whether to return coordinates of bounding boxes of each layout element."
+      },
+      "model": {
+        "type": "string",
+        "default": "",
+        "description": "Indicates which model is used for inference. The API uses the latest version of model unless user specify certain model version."
+      },
+      "base64_encoding": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "enum": ["table", "image", "text", "title", "list"]
+        },
+        "default": [],
+        "description": "Indicates which layout category should be provided as base64 encoded string."
+      }
+    }
+  });
+
+  const [apiTestResult, setApiTestResult] = useState(null);
 
   const handleMappingChange = (uiField, apiField) => {
     setMapping(prevMapping => {
@@ -120,19 +290,25 @@ function App() {
     const functionBody = Object.entries(currentMapping).reduce((acc, [uiField, apiFields]) => {
       const functionComment = `// Input: ${apiFields.map(field => `${field}: ${apiSchema[field]}`).join(', ')}\n  // Output: ${uiField}: ${uiSchema[uiField]}`;
       
+      // 함수 이름에서 띄어쓰기 제거 및 camelCase 변환
+      const sanitizedUiField = uiField.replace(/\s+(.)/g, (match, group1) => group1.toUpperCase());
+      
       if (currentCustomFunctions[uiField]) {
         // 사용자 정의 함수가 있는 경우
-        const funcBody = currentCustomFunctions[uiField].replace(/^function\s+\w+\s*\([^)]*\)\s*{/, '').replace(/}$/, '').trim();
-        transformFunctions[uiField] = `function(${apiFields.join(', ')}) { ${funcBody} }`;
+        const funcBody = currentCustomFunctions[uiField]
+          .replace(/^function\s+\w+\s*\([^)]*\)\s*{/, '')
+          .replace(/}$/, '')
+          .trim();
+        transformFunctions[sanitizedUiField] = `function(${apiFields.join(', ')}) { ${funcBody} }`;
       } else if (apiFields.length === 1) {
         // 단일 필드 매핑
-        transformFunctions[uiField] = `function(${apiFields[0]}) { return ${apiFields[0]}; }`;
+        transformFunctions[sanitizedUiField] = `function(${apiFields[0]}) { return ${apiFields[0]}; }`;
       } else if (apiFields.length > 1) {
         // 다중 필드 매핑 (기본 함수 사용)
-        transformFunctions[uiField] = `function(${apiFields.join(', ')}) { return ${apiFields[0]}; }`;
+        transformFunctions[sanitizedUiField] = `function(${apiFields.join(', ')}) { return ${apiFields[0]}; }`;
       }
 
-      acc += `${functionComment}\n  ${uiField}: transformFunctions.${uiField}(${apiFields.map(f => `data.${f}`).join(', ')}),\n\n`;
+      acc += `${functionComment}\n  ${sanitizedUiField}: transformFunctions.${sanitizedUiField}(${apiFields.map(f => `data.${f}`).join(', ')}),\n\n`;
       return acc;
     }, '');
 
@@ -143,8 +319,7 @@ function App() {
       .map(([key, value]) => `  ${key}: ${value}`)
       .join(',\n');
 
-    return `
-const transformFunctions = {
+    return `const transformFunctions = {
 ${transformFunctionsString}
 };
 
@@ -152,7 +327,7 @@ function convertData(data) {
   return {
 ${trimmedFunctionBody}
   };
-}`;
+}`.trim(); // 전체 문자열의 앞뒤 공백 제거
   };
 
   const generatePreviewData = () => {
@@ -222,134 +397,172 @@ ${trimmedFunctionBody}
     setSnackbar({ open: true, message: '샘플 API 데이터가 업데이트되었습니다.', severity: 'info' });
   };
 
+  const handleApiParamsChange = (newParams) => {
+    setApiParams(newParams);
+    setSnackbar({ open: true, message: 'API 파라미터가 업데이트되었습니다.', severity: 'info' });
+  };
+
+  const handleApiTest = async (testData) => {
+    try {
+      const response = await fetch(apiParams.url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(apiParams.api_key && { 'Authorization': `Bearer ${apiParams.api_key}` }),
+        },
+        body: JSON.stringify(testData),
+      });
+      const result = await response.json();
+      setApiTestResult(result);
+    } catch (error) {
+      setApiTestResult({ error: error.message });
+    }
+  };
+
   useEffect(() => {
     const newFunction = generateFinalConversionFunction();
     setFinalConversionFunction(newFunction);
   }, [mapping, customFunctions]);
 
   return (
-    <Container maxWidth="xl" className="App">
-      <Typography variant="h4" component="h1" gutterBottom>
-        데이터 매핑 에디터
-      </Typography>
-      <Grid container spacing={3}>
-        <Grid item xs={12} md={4}>
-          <Paper elevation={3}>
-            <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)}>
-              <Tab label="API 스키마" />
-              <Tab label="UI 스키마" />
-              <Tab label="샘플 데이터" />
-            </Tabs>
-            <Box p={2}>
-              {activeTab === 0 && (
-                <>
-                  {isEditingSchema ? (
-                    <SchemaEditor 
-                      schema={apiSchema} 
-                      onSchemaChange={handleApiSchemaChange} 
-                    />
-                  ) : (
-                    <>
-                      <SchemaViewer title="API 응답 스키마" schema={apiSchema} />
-                      <Button 
-                        variant="contained" 
-                        color="primary" 
-                        onClick={() => setIsEditingSchema(true)}
-                        sx={{ marginTop: 2 }}
-                      >
-                        스키마 편집
-                      </Button>
-                    </>
-                  )}
-                </>
-              )}
-              {activeTab === 1 && (
-                <SchemaViewer title="UI 요구 스키마" schema={uiSchema} />
-              )}
-              {activeTab === 2 && (
-                <>
-                  {isEditingSampleData ? (
-                    <SampleDataEditor 
-                      sampleData={sampleApiData} 
-                      onSampleDataChange={handleSampleDataChange} 
-                    />
-                  ) : (
-                    <>
-                      <SchemaViewer title="샘플 API 데이터" schema={sampleApiData} />
-                      <Button 
-                        variant="contained" 
-                        color="primary" 
-                        onClick={() => setIsEditingSampleData(true)}
-                        sx={{ marginTop: 2 }}
-                      >
-                        샘플 데이터 편집
-                      </Button>
-                    </>
-                  )}
-                </>
-              )}
-            </Box>
-          </Paper>
+    <Box sx={{ flexGrow: 1 }}>
+      <AppBar position="static">
+        <Toolbar>
+          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+            API 데이터 매핑 도구
+          </Typography>
+        </Toolbar>
+      </AppBar>
+      <Container maxWidth={false} sx={{ mt: 4, mb: 4 }}>
+        <Grid container spacing={3}>
+          <Grid item xs={12} md={6}>
+            <Paper elevation={3} sx={{ p: 2 }}>
+              <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)} variant="scrollable" scrollButtons="auto">
+                <Tab label="API 응답 스키마" />
+                <Tab label="UI 요구사항" />
+                <Tab label="API 설정" />
+                <Tab label="API 테스트" />
+                <Tab label="샘플 데이터" />
+              </Tabs>
+              <Box sx={{ mt: 2 }}>
+                {activeTab === 0 && (
+                  <>
+                    {isEditingSchema ? (
+                      <SchemaEditor 
+                        schema={apiSchema} 
+                        onSchemaChange={handleApiSchemaChange} 
+                      />
+                    ) : (
+                      <>
+                        <SchemaViewer title="API 응답 스키마" schema={apiSchema} />
+                        <Button 
+                          variant="contained" 
+                          color="primary" 
+                          onClick={() => setIsEditingSchema(true)}
+                          sx={{ mt: 2 }}
+                        >
+                          스키마 편집
+                        </Button>
+                      </>
+                    )}
+                  </>
+                )}
+                {activeTab === 1 && (
+                  <SchemaViewer title="UI 요구사항" schema={uiSchema} />
+                )}
+                {activeTab === 2 && (
+                  <ApiParamsEditor
+                    apiParams={apiParams}
+                    onApiParamsChange={handleApiParamsChange}
+                  />
+                )}
+                {activeTab === 3 && (
+                  <ApiTester
+                    apiParams={apiParams}
+                    onApiTest={handleApiTest}
+                    testResult={apiTestResult}
+                  />
+                )}
+                {activeTab === 4 && (
+                  <>
+                    {isEditingSampleData ? (
+                      <SampleDataEditor 
+                        sampleData={sampleApiData} 
+                        onSampleDataChange={handleSampleDataChange} 
+                      />
+                    ) : (
+                      <>
+                        <SchemaViewer title="샘플 API 데이터" schema={sampleApiData} />
+                        <Button 
+                          variant="contained" 
+                          color="primary" 
+                          onClick={() => setIsEditingSampleData(true)}
+                          sx={{ mt: 2 }}
+                        >
+                          샘플 데이터 편집
+                        </Button>
+                      </>
+                    )}
+                  </>
+                )}
+              </Box>
+            </Paper>
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <Paper elevation={3} sx={{ p: 2, mb: 3 }}>
+              <Typography variant="h6" gutterBottom>데이터 매핑 다이어그램</Typography>
+              <FlowDiagram
+                apiSchema={apiSchema}
+                uiSchema={uiSchema}
+                mapping={mapping}
+                onMappingChange={handleMappingChange}
+                onNodeClick={handleNodeClick}
+              />
+            </Paper>
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <Paper elevation={3} sx={{ p: 2 }}>
+              <Typography variant="h6" gutterBottom>매핑 목록</Typography>
+              <MappingList
+                mapping={mapping}
+                transformFunctions={transformFunctions}
+                customFunctions={customFunctions}
+                onCustomFunctionChange={handleCustomFunctionChange}
+                apiSchema={apiSchema}
+                uiSchema={uiSchema}
+              />
+            </Paper>
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <Paper elevation={3} sx={{ p: 2 }}>
+              <Typography variant="h6" gutterBottom>변환 함수</Typography>
+              <FunctionViewer
+                uiField="최종 변환 함수"
+                function={finalConversionFunction}
+                onChange={() => {}}
+                apiFields={Object.keys(apiSchema)}
+                apiSchema={apiSchema}
+                uiSchema={uiSchema}
+              />
+            </Paper>
+          </Grid>
+          <Grid item xs={12}>
+            <Paper elevation={3} sx={{ p: 2 }}>
+              <PreviewData 
+                previewData={previewData} 
+                generatePreviewData={generatePreviewData}
+                sampleApiData={sampleApiData}
+              />
+            </Paper>
+          </Grid>
         </Grid>
-        <Grid item xs={12} md={8}>
-          <Paper elevation={3}>
-            <FlowDiagram
-              apiSchema={apiSchema}
-              uiSchema={uiSchema}
-              mapping={mapping}
-              onMappingChange={handleMappingChange}
-              onNodeClick={handleNodeClick}
-            />
-          </Paper>
-        </Grid>
-      </Grid>
-      <Grid container spacing={3} sx={{ marginTop: 2 }}>
-        <Grid item xs={12} md={8}>
-          <Paper elevation={3}>
-            <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)}>
-              <Tab label="매핑 목록" />
-              <Tab label="변환 함수" />
-            </Tabs>
-            <Box p={2}>
-              {activeTab === 0 && (
-                <MappingList
-                  mapping={mapping}
-                  transformFunctions={transformFunctions}
-                  customFunctions={customFunctions}
-                  onCustomFunctionChange={handleCustomFunctionChange}
-                  apiSchema={apiSchema}
-                  uiSchema={uiSchema}
-                />
-              )}
-              {activeTab === 1 && (
-                <FunctionViewer
-                  uiField="최종 변환 함수"
-                  function={finalConversionFunction}
-                  onChange={() => {}} // 읽기 전용으로 설정
-                  apiFields={Object.keys(apiSchema)}
-                  apiSchema={apiSchema}
-                  uiSchema={uiSchema}
-                />
-              )}
-            </Box>
-          </Paper>
-        </Grid>
-        <Grid item xs={12} md={4}>
-          <Paper elevation={3}>
-            <PreviewData 
-              previewData={previewData} 
-              generatePreviewData={generatePreviewData}
-              sampleApiData={sampleApiData}
-            />
-          </Paper>
-        </Grid>
-      </Grid>
+      </Container>
       <Snackbar open={snackbar.open} autoHideDuration={6000} onClose={handleSnackbarClose}>
         <MuiAlert elevation={6} variant="filled" onClose={handleSnackbarClose} severity={snackbar.severity}>
           {snackbar.message}
         </MuiAlert>
       </Snackbar>
-    </Container>
+    </Box>
   );
 }
 
