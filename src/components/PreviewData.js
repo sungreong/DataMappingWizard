@@ -20,6 +20,13 @@ const PreviewData = ({ previewData, generatePreviewData, sampleApiData }) => {
     setSnackbar({ ...snackbar, open: false });
   };
 
+  const handleCopy = () => {
+    const textToCopy = JSON.stringify(previewData, null, 2);
+    navigator.clipboard.writeText(textToCopy)
+      .then(() => alert('변환 결과가 클립보드에 복사되었습니다.'))
+      .catch(err => console.error('복사 실패:', err));
+  };
+
   return (
     <Box p={2}>
       <Typography variant="h6" gutterBottom>실시간 미리보기</Typography>
@@ -52,9 +59,14 @@ const PreviewData = ({ previewData, generatePreviewData, sampleApiData }) => {
             {previewData.error ? (
               <Typography color="error">에러: {previewData.error}</Typography>
             ) : (
-              <pre style={{ maxHeight: '300px', overflow: 'auto' }}>
-                {JSON.stringify(previewData, null, 2)}
-              </pre>
+              <>
+                <pre style={{ maxHeight: '300px', overflow: 'auto' }}>
+                  {JSON.stringify(previewData, null, 2)}
+                </pre>
+                <Button variant="outlined" color="primary" onClick={handleCopy} sx={{ mt: 2 }}>
+                  결과 복사
+                </Button>
+              </>
             )}
           </Paper>
         </Grid>

@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { Box, Button, Typography, Paper, Grid, Select, MenuItem, FormControl, InputLabel } from '@mui/material';
-import axios from 'axios';
+import { Box, Button, Typography, Paper, Grid, Select, MenuItem, FormControl, InputLabel, CircularProgress } from '@mui/material';
 
-const ApiTester = ({ apiParams, onApiTest }) => {
+const ApiTester = ({ apiParams }) => {
   const [files, setFiles] = useState({});
   const [testResult, setTestResult] = useState(null);
   const [selectedParams, setSelectedParams] = useState({});
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleFileChange = (key, event) => {
     setFiles(prev => ({ ...prev, [key]: event.target.files[0] }));
@@ -21,7 +21,7 @@ const ApiTester = ({ apiParams, onApiTest }) => {
       .catch(err => console.error('복사 실패:', err));
   };
 
-  const callApi = async () => {
+  const handleApiCall = async () => {
     const formData = new FormData();
     
     Object.entries(apiParams.data).forEach(([key, param]) => {
@@ -36,25 +36,23 @@ const ApiTester = ({ apiParams, onApiTest }) => {
         formData.append(key, selectedParams[key] || param.default);
       }
     });
-
+  
+    setIsLoading(true);
     try {
-      const response = await axios.post(
-        apiParams.url,
-        formData,
-        {
-          headers: {
-            'Authorization': `Bearer ${apiParams.api_key}`,
-            'Content-Type': 'multipart/form-data'
-          }
-        }
-      );
-      setTestResult(response.data);
-      onApiTest(response.data);
+      const response = await fetch(apiParams.url, {
+        method: 'POST',
+        headers: {
+          ...(apiParams.api_key && { 'Authorization': `Bearer ${apiParams.api_key}` }),
+        },
+        body: formData,
+      });
+      const result = await response.json();
+      setTestResult(result);
     } catch (error) {
-      console.error('API 호출 중 오류 발생:', error);
-      const errorResult = { error: error.response ? error.response.data : error.message };
-      setTestResult(errorResult);
-      onApiTest(errorResult);
+      console.error('API 호출 오류:', error);
+      setTestResult({ error: error.message });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -102,17 +100,37 @@ const ApiTester = ({ apiParams, onApiTest }) => {
           </Grid>
         ))}
         <Grid item xs={12}>
-          <Button variant="contained" color="primary" onClick={callApi} sx={{ mt: 2 }}>
-            API 호출
-          </Button>
+          <Box display="flex" alignItems="center">
+            <Button 
+              variant="contained" 
+              color="primary" 
+              onClick={handleApiCall} 
+              disabled={isLoading}
+              sx={{ mt: 2, mr: 2 }}
+            >
+              API 호출
+            </Button>
+            {isLoading && <CircularProgress size={24} />}
+          </Box>
         </Grid>
       </Grid>
       {testResult && (
         <Paper elevation={3} sx={{ mt: 3, p: 2 }}>
           <Typography variant="h6" gutterBottom>테스트 결과</Typography>
-          <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
-            {JSON.stringify(testResult, null, 2)}
-          </pre>
+          <Box 
+            sx={{ 
+              maxWidth: '100%', 
+              maxHeight: '300px', 
+              overflow: 'auto', 
+              backgroundColor: '#f5f5f5',
+              padding: 2,
+              borderRadius: 1
+            }}
+          >
+            <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+              {JSON.stringify(testResult, null, 2)}
+            </pre>
+          </Box>
           <Button variant="outlined" color="primary" onClick={handleCopy} sx={{ mt: 2 }}>
             결과 복사
           </Button>

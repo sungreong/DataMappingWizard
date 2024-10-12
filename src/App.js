@@ -67,6 +67,17 @@ const ui_schema = {
   ]
 }
 
+
+const test_schema = {
+  "id": "string",
+  "name": "string",
+  "email": "string",
+  "address": {
+    "street": "string",
+    "city": "string",
+    "country": "string"
+  }
+}
 const parser_schema = {
   "id": "string",
   "filename": "string",
@@ -101,6 +112,18 @@ const parser_schema = {
     }
   ]
 }
+const parser_data_params = {
+  "file": {
+    "type": "file",
+    "description": "The file to be parsed."
+  }
+}
+const parser_url = "http://localhost:8000/parse";
+const default_schema = parser_schema;
+const default_api_key = ""
+const default_url = parser_url;
+const default_data_params = parser_data_params;
+
 const element_upstage_function = function transform(elements) {
   return elements.map(element => {
     // bbox 좌표 계산
@@ -189,12 +212,20 @@ const upstage_api_params_info = {
     "description": "Indicates which layout category should be provided as base64 encoded string."
   }
 }
-
+// let ui_schema = {
+//   "id": "string",
+//   "name": "string",
+//   "email": "string",
+//   "address" : {
+//     "street": "string",
+//     "city": "string",
+//     "country": "string"
+//   }
+// }
 function App() {
-  const [apiSchema, setApiSchema] = useState(upstage_schema);
 
+  const [apiSchema, setApiSchema] = useState(default_schema);
   const [uiSchema, setUiSchema] = useState(ui_schema);
-
   const [mapping, setMapping] = useState({});
   const [previewData, setPreviewData] = useState({});
   const [selectedUiField, setSelectedUiField] = useState(null);
@@ -210,7 +241,6 @@ function App() {
       country: "USA"
     }
   });
-
   const [customFunctions, setCustomFunctions] = useState({});
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const [isEditingSchema, setIsEditingSchema] = useState(false);
@@ -220,9 +250,9 @@ function App() {
   const [isEditingSampleData, setIsEditingSampleData] = useState(false);
 
   const [apiParams, setApiParams] = useState({
-    url: 'https://api.upstage.ai/v1/document-ai/document-parse',
-    api_key: '',
-    data: upstage_api_params_info,
+    url: default_url,
+    api_key: default_api_key,
+    data: default_data_params,
   });
 
   const [apiTestResult, setApiTestResult] = useState(null);
@@ -404,22 +434,22 @@ ${trimmedFunctionBody}
     setSnackbar({ open: true, message: 'API 파라미터가 업데이트되었습니다.', severity: 'info' });
   };
 
-  const handleApiTest = async (testData) => {
-    try {
-      const response = await fetch(apiParams.url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(apiParams.api_key && { 'Authorization': `Bearer ${apiParams.api_key}` }),
-        },
-        body: JSON.stringify(testData),
-      });
-      const result = await response.json();
-      setApiTestResult(result);
-    } catch (error) {
-      setApiTestResult({ error: error.message });
-    }
-  };
+  // const handleApiTest = async (testData) => {
+  //   try {
+  //     const response = await fetch(apiParams.url, {
+  //       method: 'POST',
+  //       headers: {
+  //         'Content-Type': 'application/json',
+  //         ...(apiParams.api_key && { 'Authorization': `Bearer ${apiParams.api_key}` }),
+  //       },
+  //       body: JSON.stringify(testData),
+  //     });
+  //     const result = await response.json();
+  //     setApiTestResult(result);
+  //   } catch (error) {
+  //     setApiTestResult({ error: error.message });
+  //   }
+  // };
 
   useEffect(() => {
     const newFunction = generateFinalConversionFunction();
@@ -481,8 +511,6 @@ ${trimmedFunctionBody}
                 {activeTab === 3 && (
                   <ApiTester
                     apiParams={apiParams}
-                    onApiTest={handleApiTest}
-                    testResult={apiTestResult}
                   />
                 )}
                 {activeTab === 4 && (

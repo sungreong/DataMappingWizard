@@ -1,0 +1,22 @@
+# 개발용 Dockerfile - Debian 기반 Slim 이미지 유지
+FROM node:20-bullseye-slim
+
+# 작업 디렉토리 설정
+WORKDIR /app
+
+# package.json과 package-lock.json 파일 복사
+COPY package*.json ./
+RUN npm cache clean --force
+
+# 의존성 설치
+RUN npm install 
+# --no-optional --no-audit
+
+# 포트 노출
+EXPOSE 3000
+
+# 환경 변수 설정
+ENV PORT=3000
+
+# 개발 서버 실행
+CMD ["npm", "start"]
